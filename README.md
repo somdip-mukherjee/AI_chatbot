@@ -57,3 +57,5 @@ The NiceGUI frontend will be available at: http://localhost:8080
 
 3. The classified intent is displayed in the UI.
 
+### about files : app.py is main file , logic.py has only the logic and need not be run , the above steps are for running app.py
+
