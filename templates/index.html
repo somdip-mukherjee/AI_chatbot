@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI intent classifier</title>
+    <script>
+        async function updateWords() {
+            let words = document.getElementById("words").value.split(",");
+            let response = await fetch("/update_words", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ words: words.map(word => word.trim()) })
+            });
+            let data = await response.json();
+            document.getElementById("status").innerText = data.message;
+        }
+
+        async function sendMessage() {
+            let userMessage = document.getElementById("message").value;
+            let response = await fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: userMessage })
+            });
+            let data = await response.json();
+            document.getElementById("chatbox").innerHTML += "<p><b>You:</b> " + userMessage + "</p>";
+            document.getElementById("chatbox").innerHTML += "<p><b>Bot:</b> " + data.reply + "</p>";
+        }
+    </script>
+</head>
+<body>
+    <h1>Chatbot with Custom Words</h1>
+    
+    <h3>Update Your Words</h3>
+    <input type="text" id="words" placeholder="Enter words separated by commas">
+    <button onclick="updateWords()">Update Words</button>
+    <p id="status"></p>
+
+    <h3>Chat</h3>
+    <div id="chatbox" style="border:1px solid #000; padding:10px; width:50%; height:200px; overflow:auto;"></div>
+    <input type="text" id="message" placeholder="Enter your message">
+    <button onclick="sendMessage()">Send</button>
+</body>
+</html>

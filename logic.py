@@ -1,40 +1,46 @@
-from langchain_ollama import OllamaLLM
-from langchain_core.prompts import ChatPromptTemplate
+from flask import Flask, render_template, request, jsonify
+import ollama
 
-# Define prompt template
-template = """
-Answer the question below.
+app = Flask(__name__)
 
-Here is the conversation history: {history}
+# Store user words
+data_store = {"words": []}
 
-Question: {question}
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-Answer: 
-"""
+@app.route('/update_words', methods=['POST'])
+def update_words():
+    words = request.json.get('words', [])
+    if isinstance(words, list):
+        data_store["words"] = [word.strip() for word in words if isinstance(word, str)]
+    return jsonify({'message': 'Intents updated successfully', 'stored_words': data_store["words"]})
 
-# Load Ollama LLM model (make sure the model is installed in Ollama)
-model = OllamaLLM(model="gemma2")
-prompt = ChatPromptTemplate.from_template(template)
-chain = prompt | model
+@app.route('/chat', methods=['POST'])
+def chat():
+    user_message = request.json.get('message', '')
+    user_words = ', '.join(data_store["words"])
+    user_message = f"""
+    Analyze the following user message and classify its intent concisely.
 
-# Chatbot function
-def handle_conversation():
-    history = ""  # Initialize history
-    print("Welcome to the AI Chatbot! Type 'exit' to quit.")
+    User Message: "{user_message}"
 
-    while True:
-        user_input = input("You: ")
-        if user_input.lower() == 'exit':
-            break
+    Provide only the intent as a one- or two-word label, without any explanations. 
+    Then, compute similarity scores between the generated intent and the following predefined intents: 
+    {user_words}.
 
-        # Get response from model
-        result = chain.invoke({"history": history, "question": user_input})
+    Formst the output as follows:
+    Intent: <generated_intent> 
+    Similarity Scores: 
+    <intent 1>: <score 1>
+    <intent 2>: <score 2>
+    <intent 3>: <score 3> 
+    and so on.
+    """
+    response = ollama.chat(model='gemma2', messages=[{'role': 'user', 'content': user_message}])
+    bot_reply = response.get('message', {}).get('content', 'Error generating response')
+    return jsonify({'reply': f"{bot_reply}"})
 
-        # Print bot response
-        print("Bot: ", result)
-
-        # Update conversation history
-        history += f"\nUser: {user_input}\nAI: {result}"
-
-if __name__ == "__main__":
-    handle_conversation()
+if __name__ == '__main__':
+    app.run(debug=True)
