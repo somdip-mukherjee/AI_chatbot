@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import ollama
+import json
+import re
 
 app = Flask(__name__)
 
@@ -21,7 +23,8 @@ def update_words():
 def chat():
     user_message = request.json.get('message', '')
     user_words = ', '.join(data_store["words"])
-    user_message = f"""
+
+    prompt = f"""
     Analyze the following user message and classify its intent concisely.
 
     User Message: "{user_message}"
@@ -30,17 +33,29 @@ def chat():
     Then, compute similarity scores between the generated intent and the following predefined intents: 
     {user_words}.
 
-    Format the output as follows:
-    Intent: <generated_intent> 
-    Similarity Scores: 
-    <intent 1>: <score 1>
-    <intent 2>: <score 2>
-    <intent 3>: <score 3> 
-    and so on.
+    Format the output in JSON with the structure:
+    {{
+        "<intent 1>": <score 1>,
+        "<intent 2>": <score 2>,
+        "<intent 3>": <score 3>
+    }}
     """
-    response = ollama.chat(model='gemma2', messages=[{'role': 'user', 'content': user_message}])
-    bot_reply = response.get('message', {}).get('content', 'Error generating response')
-    return jsonify({'reply': f"{bot_reply}"})
+
+    response = ollama.chat(model='gemma2', messages=[{'role': 'user', 'content': prompt}])
+    bot_reply = response.get('message', {}).get('content', '')
+
+    # Extract JSON response from model output
+    match = re.search(r'{.*}', bot_reply, re.DOTALL)
+    if match:
+        try:
+            parsed_json = json.loads(match.group())  # Convert extracted string to JSON object
+            json_string = json.dumps(parsed_json, indent=4)  # Convert JSON object to a formatted JSON string
+        except json.JSONDecodeError:
+            json_string = json.dumps({"error": "Failed to parse JSON"})
+    else:
+        json_string = json.dumps({"error": "Invalid response format"})
+
+    return jsonify({"reply": json_string})  # Return JSON string inside JSON object
 
 if __name__ == '__main__':
     app.run(debug=True)
