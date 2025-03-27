@@ -1,4 +1,3 @@
-from pyexpat.errors import messages
 import ollama
 import time
 all_labels = []
@@ -32,28 +31,30 @@ def chat_with_gemma(labels):
         for line in file:
             sentences.append(line.strip())  # Read each line and store in list
 
-    i=0
-    for sentence in sentences : 
-        i=i+1
-        user_message = {"role": "user", "content": f"{labels}. Sentence: {sentence}"}
+    batch_size = 20  # Process 20 sentences at a time
+
+    for i in range(0, len(sentences), batch_size):
+        batch = sentences[i:i + batch_size]  # Take a batch of sentences
+        user_messages = [{"role": "user", "content": f"{labels}. Sentence: {sentence}"} for sentence in batch]
         start_time = time.time()
-        # Call Ollama API for each sentence
-        response = ollama.chat(model="gemma2", messages=[system_message, user_message])
+        # Call Ollama API for each sentence in the batch
+        batch_responses = [ollama.chat(model="gemma2", messages=[system_message, msg]) for msg in user_messages]
         end_time = time.time()
-        # Print results
-        print(f"time taken for sentence  {i} : {end_time - start_time:.2f} seconds")
-        print("Sentence:", sentence)
-        print("Gemma:", response['message']['content'])
-        print("-" * 50)
-        all_responses.append(response['message']['content'].strip()) # Store all responses
+        # Print results for the current batch immediately
+        print(f"\n--- Batch {i // batch_size + 1} ---\n")
+        print(f"time taken for batch {i+1} : ",end_time - start_time)
+        for sentence, response in zip(batch, batch_responses):
+            print("Sentence:", sentence)
+            print("Gemma:", response['message']['content'])
+            print("-" * 50)
+            all_responses.append(response['message']['content'].strip()) # Store all responses
+            # print(all_responses)
 
-
-
-    # c=0
-    # for i in range(0,len(all_responses),1):
-    #     if all_responses[i] == all_labels[i]:
-    #         c=c+1
-    # print(c)
+    c=0
+    for i in range(0,len(all_responses),1):
+        if all_responses[i] == all_labels[i]:
+            c=c+1
+    print(c)
 
 
 if __name__ == "__main__":
