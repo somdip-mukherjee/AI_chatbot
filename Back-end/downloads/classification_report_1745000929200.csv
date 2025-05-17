@@ -1,0 +1,2 @@
+Model Name,Dataset Name,Dataset Size,Accuracy (%),Avg Latency (s),Precision,Recall,F1-Score
+gemma3:1b,banking_seq_30.txt,30,66.6667,0.3350,0.6677,0.6667,0.6383
